@@ -1,0 +1,102 @@
+[
+	{
+		"attributes": {
+			"currentStream": {
+				"connections": [],
+				"metaData": {}
+			},
+			"showReconnect": true
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 101,
+		"label": "Stream 2",
+		"name": "stream2",
+		"serialized": {
+			"desiredStream": {
+				"connections": [
+					"discover:///?stream=message&name=simpleEventsSource"
+				],
+				"metaData": {},
+				"name": "message",
+				"serializedType": "DgA="
+			},
+			"reconnect": false
+		},
+		"type": "Resonance::Parameters::Stream"
+	},
+	{
+		"attributes": {
+			"options": [
+				"python 3.8"
+			]
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 1,
+		"label": "Engine",
+		"name": "engine",
+		"serialized": 0,
+		"type": "Resonance::Parameters::Select"
+	},
+	{
+		"attributes": {
+			"currentStream": {
+				"connections": [],
+				"metaData": {}
+			},
+			"showReconnect": true
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 100,
+		"label": "Stream 1",
+		"name": "stream1",
+		"serialized": {
+			"desiredStream": {
+				"connections": [
+					"discover:///?stream=generated&name=signalGenerator"
+				],
+				"metaData": {},
+				"name": "generated",
+				"serializedType": "FwADAAAAAAAAAABAb0A="
+			},
+			"reconnect": false
+		},
+		"type": "Resonance::Parameters::Stream"
+	},
+	{
+		"attributes": null,
+		"enabled": true,
+		"group": "default",
+		"index": 2,
+		"label": "Load code",
+		"name": "loadCode",
+		"serialized": "import resonance\n",
+		"type": "Resonance::Parameters::MultiLine"
+	},
+	{
+		"attributes": null,
+		"enabled": true,
+		"group": "default",
+		"index": 201,
+		"label": "Code",
+		"name": "code",
+		"serialized": "from process import online_processing_old\n\nonline_processing_old()\n",
+		"type": "Resonance::Parameters::MultiLine"
+	},
+	{
+		"attributes": {
+			"maximum": 99,
+			"minimum": 0,
+			"stepSize": 1
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 99,
+		"label": "Number of input streams",
+		"name": "inputsCount",
+		"serialized": 2,
+		"type": "Resonance::Parameters::Integer"
+	}
+]
