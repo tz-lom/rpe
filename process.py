@@ -8,7 +8,7 @@ def online_processing_example2():
     import resonance.pipe
     import scipy.signal as sp_sig
     eeg = resonance.input(0) 
-    cut_off_frequency = 30 
+    cut_off_frequency = 30  # change this to 3 to suppress signal
     low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
     eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
     resonance.createOutput(eeg_filtered, 'out')
