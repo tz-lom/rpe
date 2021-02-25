@@ -1,32 +1,6 @@
 [
 	{
 		"attributes": {
-			"currentStream": {
-				"connections": [],
-				"metaData": {}
-			},
-			"showReconnect": true
-		},
-		"enabled": true,
-		"group": "default",
-		"index": 101,
-		"label": "Stream 2",
-		"name": "stream2",
-		"serialized": {
-			"desiredStream": {
-				"connections": [
-					"discover:///?stream=message&name=simpleEventsSource"
-				],
-				"metaData": {},
-				"name": "message",
-				"serializedType": "DgA="
-			},
-			"reconnect": false
-		},
-		"type": "Resonance::Parameters::Stream"
-	},
-	{
-		"attributes": {
 			"options": [
 				"python 3.8"
 			]
@@ -82,7 +56,7 @@
 		"index": 201,
 		"label": "Code",
 		"name": "code",
-		"serialized": "from process import online_processing_old\n\nonline_processing_old()\n",
+		"serialized": "from process import online_processing_example2\n\nonline_processing_example2()\n",
 		"type": "Resonance::Parameters::MultiLine"
 	},
 	{
@@ -96,7 +70,7 @@
 		"index": 99,
 		"label": "Number of input streams",
 		"name": "inputsCount",
-		"serialized": 2,
+		"serialized": 1,
 		"type": "Resonance::Parameters::Integer"
 	}
 ]
