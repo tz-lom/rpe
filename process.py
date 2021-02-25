@@ -2,6 +2,7 @@ import resonance
 import resonance.pipe
 import resonance.cross
 import scipy.signal as sp_sig
+import numpy as np
 
 def online_processing_example2():
     import resonance
@@ -27,6 +28,8 @@ def online_processing_old():
 
     baseline_begin_offset = 0
     baseline_end_offset = 500
-    result = resonance.pipe.baseline(eeg_windowized, baseline_begin_offset, baseline_end_offset)
+    baselined = resonance.pipe.baseline(eeg_windowized, baseline_begin_offset, baseline_end_offset)
+
+    result = resonance.pipe.transform_to_event(baselined, lambda block: str(np.max(block)))
 
     resonance.createOutput(result, 'out')
