@@ -14,6 +14,9 @@ def online_processing_example2():
     eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
     resonance.createOutput(eeg_filtered, 'out')
 
+def makeEvent(block):
+    return np.max(block)
+
 def online_processing_old():
     eeg = resonance.input(0)
 
@@ -30,6 +33,6 @@ def online_processing_old():
     baseline_end_offset = 500
     baselined = resonance.pipe.baseline(eeg_windowized, baseline_begin_offset, baseline_end_offset)
 
-    result = resonance.pipe.transform_to_event(baselined, lambda block: str(np.max(block)))
+    result = resonance.pipe.transform_to_event(baselined, makeEvent)
 
     resonance.createOutput(result, 'out')
