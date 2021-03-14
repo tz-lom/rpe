@@ -27,7 +27,7 @@ ApplicationWindow
 		anchors.fill: parent
 		text: "Send events"
 		onClicked: {
-			clickSender.sendMessage("event");
+			clickSender.sendMessage("12:14");
 		}
 	}
         
