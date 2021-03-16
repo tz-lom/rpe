@@ -6,7 +6,7 @@
 		"index": 201,
 		"label": "Code",
 		"name": "code",
-		"serialized": "from importlib import reload\nimport process\nreload(process)\n\nprocess.online_processing_old()\n",
+		"serialized": "from importlib import reload\nimport process\nreload(process)\n\nprocess.online_processing_v3()\n",
 		"type": "Resonance::Parameters::MultiLine"
 	},
 	{
