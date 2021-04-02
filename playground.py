@@ -4,7 +4,7 @@ import resonance.run
 import resonance.pipe
 import resonance.cross
 import resonance.db
-from process import online_processing_old
+from process import *
 
 
 def interleave_blocks(blocks):
@@ -35,7 +35,8 @@ si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
 
-r1 = resonance.run.offline(si, data, online_processing_old)
-r2 = resonance.run.online(si, data, online_processing_old)
-print(r1['out'])
-print(r2['out'])
+r1 = resonance.run.offline(si, data, online_processing_4)
+print(r1)
+# r2 = resonance.run.online(si, data, online_processing3)
+# print(r1['out'])
+# print(r2['out'])
