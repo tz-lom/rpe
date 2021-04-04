@@ -22,13 +22,38 @@ ApplicationWindow
         id: clickSender
         enabled: true // важно 
     }  
-        
-	Button {
+	
+	RowLayout{
 		anchors.fill: parent
-		text: "Send events"
-		onClicked: {
-			clickSender.sendMessage("12:14");
+		
+		Button {
+			text: "1"
+			onClicked: {
+				clickSender.sendMessage("1");
+			}
 		}
+		
+		Button {
+			text: "2"
+			onClicked: {
+				clickSender.sendMessage("2");
+			}
+		}
+
+		Button {
+			text: "3"
+			onClicked: {
+				clickSender.sendMessage("3");
+			}
+		}
+
+		Button {
+			text: "4"
+			onClicked: {
+				clickSender.sendMessage("4");
+			}
+		}
+	
 	}
         
 }

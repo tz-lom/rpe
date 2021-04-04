@@ -4,20 +4,23 @@ import resonance.cross
 import scipy.signal as sp_sig
 import numpy as np
 
-def online_processing_example2():
+
+def online_processing_0():
     import resonance
     import resonance.pipe
     import scipy.signal as sp_sig
-    eeg = resonance.input(0) 
+    eeg = resonance.input(0)
     cut_off_frequency = 30  # change this to 3 to suppress signal
     low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
     eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
     resonance.createOutput(eeg_filtered, 'out')
 
-def makeEvent(block):
-    return np.max(block)
 
-def online_processing_old():
+def makeEvent(block):
+    return str(np.max(block))
+
+
+def online_processing_1():
     eeg = resonance.input(0)
 
     cut_off_frequency = 30
@@ -29,16 +32,14 @@ def online_processing_old():
     window_size = 500
     eeg_windowized = resonance.cross.windowize_by_events(eeg_filtered, events, window_size)
 
-    baseline_begin_offset = 0
-    baseline_end_offset = 500
-    baselined = resonance.pipe.baseline(eeg_windowized, baseline_begin_offset, baseline_end_offset)
+    baselined = resonance.pipe.baseline(eeg_windowized)
 
     result = resonance.pipe.transform_to_event(baselined, makeEvent)
 
     resonance.createOutput(result, 'out')
-    
-    
-def online_processing_v3():
+
+
+def online_processing_2():
     eeg = resonance.input(0)
 
     cut_off_frequency = 30
@@ -46,7 +47,7 @@ def online_processing_v3():
 
     eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
     events = resonance.input(1)
-    
+
     window_size = 500
     window_shift = -window_size
     eeg_windowized = resonance.cross.windowize_by_events(eeg_filtered, events, window_size, window_shift)
@@ -55,7 +56,7 @@ def online_processing_v3():
     resonance.createOutput(result, 'out')
 
 
-def online_processing3():
+def online_processing_3():
     import resonance.pipe
     import scipy.signal as sp_sig
     eeg = resonance.input(0)
@@ -63,11 +64,10 @@ def online_processing3():
     cut_off_frequency = 30
     low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
 
-   # eeg_data = np.array(eeg)
+    # eeg_data = np.array(eeg)
     eeg_data = eeg[:, 0]
     eeg_data = np.reshape(eeg_data, (eeg.shape[0], 1))
     eeg_filtered = resonance.pipe.filter(eeg_data, low_pass_filter)
-
 
     # так можно сделать рассчёт земли например
 
@@ -96,13 +96,14 @@ def online_processing3():
     baselined = baselined + 10
     resonance.createOutput(baselined, 'out')
 
-    #как делать мат операции?
+    # как делать мат операции?
 
     # def your_operation(channels):
     #     return channels + 10
     #
     # result = resonance.pipe.transform_channels(baselined, baselined.SI.channels, your_operation)
     # resonance.createOutput(result, 'after_operation')
+
 
 def online_processing_4():
     import resonance.pipe
@@ -134,13 +135,26 @@ def online_processing_4():
     cmd1 = resonance.pipe.filter_event(events, rule1)
     resonance.createOutput(cmd1, 'Evtout1')
 
-
     cmd2 = resonance.pipe.filter_event(events, rule2)
 
-    eeg_windowized = resonance.cross.windowize_by_events(eeg_filtered, events, window_size, window_shift)
-    baselined = resonance.pipe.baseline(eeg_windowized, range(baseline_begin_offset, baseline_end_offset))
+    eeg_windowized = resonance.cross.windowize_by_events(eeg_filtered, cmd2, window_size, window_shift)
+    baselined = resonance.pipe.baseline(eeg_windowized, slice(baseline_begin_offset, baseline_end_offset))
     result_ = resonance.pipe.transform_to_event(baselined, makeEvent)
     resonance.createOutput(result_, 'Evtout2')
 
-    cmd3 = resonance.pipe.filter_event(events, lambda evt: not(rule1(evt) or rule2(evt)))
+    cmd3 = resonance.pipe.filter_event(events, lambda evt: not (rule1(evt) or rule2(evt)))
     resonance.createOutput(cmd3, 'Evtout3')
+
+
+def online_processing_5():
+    import resonance.pipe
+    import scipy.signal as sp_sig
+
+    eeg = resonance.input(0)
+    events = resonance.input(1)
+
+    cut_off_frequency = 2
+    low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
+    eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
+
+    resonance.createOutput(eeg_filtered, 'out')
