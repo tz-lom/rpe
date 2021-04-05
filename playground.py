@@ -23,8 +23,23 @@ def artificial_eeg(sampling_rate, seconds, freq):
     ]
     return si, data
 
+# ф-ция создаёт сигналы-синусоиды указанной частоты для указанного кол-ва каналов
+def artificial_eeg2(sampling_rate, seconds, freq, chCnt = 1):
+    si = resonance.si.Channels(chCnt, sampling_rate)
+    data = []
+    for time in np.arange(0, seconds):
+        data_ = np.zeros((sampling_rate, chCnt))
+        for ic in range(chCnt):
+            data_[:,ic] = np.sin(np.linspace(time, time+1, num=sampling_rate)*2*np.pi*freq[ic])
+        resData = resonance.db.Channels(si, time*1e9, data_)
+        data.append(resData)
+    return si, data
 
-eeg_si, eeg_blocks = artificial_eeg(500, 8, 4.3)
+freq = [4.3, 10, 15]
+chnlCnt = 3
+eeg_si, eeg_blocks = artificial_eeg2(500, 8, freq, chnlCnt)
+
+#eeg_si, eeg_blocks = artificial_eeg(500, 8, 4.3)
 events_si = resonance.si.Event()
 events_blocks = [
     resonance.db.Event(events_si, 1.1e9, '1'),
@@ -36,7 +51,7 @@ events_blocks = [
 si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
-proc = online_processing_4
+proc = online_processing_3
 # r1 = resonance.run.offline(si, data, proc)
 # print(r1)
 r2 = resonance.run.online(si, data, proc, return_blocks=False)
