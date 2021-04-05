@@ -10,9 +10,18 @@ def online_processing_0():
     import resonance.pipe
     import scipy.signal as sp_sig
     eeg = resonance.input(0)
-    cut_off_frequency = 30  # change this to 3 to suppress signal
-    low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
-    eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
+    cut_off_frequency = 35  # change this to 3 to suppress signal
+    #low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
+    '''
+    bandstop_frequency = 50
+    w0 = [(bandstop_frequency - 0.5) / (eeg.SI.samplingRate / 2), (bandstop_frequency + 0.5) / (eeg.SI.samplingRate / 2)]
+    bandstop_filter = sp_sig.butter(4, w0, btype='bandstop')
+    eeg_filtered = resonance.pipe.filter(eeg, bandstop_filter)
+    resonance.createOutput(eeg_filtered, 'out')
+    '''
+    highpass_frequency = 0.1
+    highpass_filter = sp_sig.butter(4, highpass_frequency, 'hp', fs=eeg.SI.samplingRate)
+    eeg_filtered = resonance.pipe.filter(eeg, highpass_filter)
     resonance.createOutput(eeg_filtered, 'out')
 
 
@@ -167,3 +176,53 @@ def online_processing_5():
     conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 9)
 
     resonance.createOutput(conditional, 'out')
+
+#селективная фильтрация каналов + корректировка ЭЭГ на референт
+def online_processing_6():
+    import resonance.pipe
+    import scipy.signal as sp_sig
+
+    allData = resonance.input(0)
+    events = resonance.input(1)
+
+    np_eye = np.eye(allData.SI.channels)  # единичная матрица - основа пространственной фильтрации
+
+    sptl_filtr0 = np_eye[..., :-1]  # 2 последний канал - эвентный канал, убираем его из списка каналов (убираем из единичной матрицы крайний столбец)
+    woEvtChnlData = resonance.pipe.spatial(allData, sptl_filtr0)
+
+    bandstop_frequency = 50 # применяем режектор 50Гц для всех данных, кроме эвентного канала
+    w0 = [(bandstop_frequency - 0.5) / (allData.SI.samplingRate / 2), (bandstop_frequency + 0.5) / (allData.SI.samplingRate / 2)]
+    bandstop_filter = sp_sig.butter(4, w0, btype='bandstop')
+    woEvtChnldata_Notchfiltered = resonance.pipe.filter(woEvtChnlData, bandstop_filter)
+    resonance.createOutput(woEvtChnldata_Notchfiltered, 'AllData_Notch_Filtered')
+
+    np_eye2 = np.eye(allData.SI.channels-1)  # единичная матрица для всех каналов минус эвентный канал
+
+    sptl_filtr = np_eye2[..., :-1]  #оставляем только ЭЭГ, убираем последний канал - это ЭМГ (убираем из единичной матрицы крайний столбец)
+    eegData = resonance.pipe.spatial(woEvtChnldata_Notchfiltered, sptl_filtr)
+    sptl_filtr2 = np_eye2[..., -1:] #оставляем последний столбец - для отдельной фильтрации ЭМГ канала
+    emgData = resonance.pipe.spatial(woEvtChnldata_Notchfiltered, sptl_filtr2)
+
+    cut_off_frequency = 35
+    low_pass_filter = sp_sig.butter(4, cut_off_frequency / allData.SI.samplingRate * 2, btype='low')
+    eeg_LPfiltered = resonance.pipe.filter(eegData, low_pass_filter)
+    resonance.createOutput(eeg_LPfiltered, 'EEG_Notch_LP_Filtered')
+
+    highpass_frequency = 0.1
+    highpass_filter = sp_sig.butter(4, highpass_frequency, 'hp', fs=allData.SI.samplingRate)
+    eeg_LPHPfiltered = resonance.pipe.filter(eeg_LPfiltered, highpass_filter)
+    resonance.createOutput(eeg_LPHPfiltered, 'EEG_Notch_LP_HPFiltered')
+
+    #уже фильтрованную ЭЭГ корректируем на референт, в качестве которого возьмём 1й канал
+    np_eye3 = np.eye(allData.SI.channels - 2)  # единичная матрица для всех каналов минус эвентный канал и минус ЭМГ
+    np_eye3[0, ...] = -1  # готовим матрицу, чтобы 1й канал вычесть из остальных (нулевая строка = -1)
+    sptl_filtr4 = np_eye3[...,1:]  # первый канал - это референт, убираем его из списка каналов (Убираем первый столбец матрицы)
+    eeg_Filtered_Referenced = resonance.pipe.spatial(eeg_LPHPfiltered, sptl_filtr4)
+    resonance.createOutput(eeg_LPHPfiltered, 'EEG_Filtered_Referenced')
+
+    #для ЭМГ применим только фильтр высоких частот
+    highpass_frequency = 5
+    highpass_filter = sp_sig.butter(4, highpass_frequency, 'hp', fs=allData.SI.samplingRate)
+    emg_HPfiltered = resonance.pipe.filter(emgData, highpass_filter)
+    resonance.createOutput(emg_HPfiltered, 'EMG_Notch_HPFiltered')
+
