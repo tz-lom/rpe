@@ -65,24 +65,36 @@ def online_processing_3():
     low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
 
     # eeg_data = np.array(eeg)
+    '''
     eeg_data = eeg[:, 0]
     eeg_data = np.reshape(eeg_data, (eeg.shape[0], 1))
-    eeg_filtered = resonance.pipe.filter(eeg_data, low_pass_filter)
+    '''
+    eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
 
-    # так можно сделать рассчёт земли например
+    # так можно сделать расчёт референта, например
 
-    spatial_filter = np.eye(eeg_filtered.SI.channels)  # диагональная матрица
+    spatial_filter = np.eye(eeg_filtered.SI.channels)  # единичная матрица
+
     # [ 1  0  0 ]
     # [ 0  1  0 ]
     # [ 0  0  1 ]
     spatial_filter[0, ...] = -1  # первый канал вычитаем из остальных
+    # пример, если каналы - строки
     # [-1  0  0 ]
     # [-1  1  0 ]
     # [-1  0  1 ]
-    spatial_filter = spatial_filter[..., 1:]  # первый канал это земля, убираем его из списка каналов
+    #если каналы - столбцы, как у нас, то
+    # [-1  -1  -1 ]
+    # [ 0   1   0 ]
+    # [ 0   0   1 ]
+    spatial_filter = spatial_filter[..., 1:]  # первый канал это референт, убираем его из списка каналов
+    # пример, если каналы - строки
     # [-1  1  0 ]
     # [-1  0  1 ]
-
+    # если каналы - столбцы, как у нас, то
+    # [-1  -1 ]
+    # [ 1   0 ]
+    # [ 0   1 ]
     eeg_referenced = resonance.pipe.spatial(eeg_filtered, spatial_filter)
 
     events = resonance.input(1)
@@ -131,10 +143,11 @@ def online_processing_4():
 
     def rule2(evt):
         return evt == "2"
-
+    #это позволяет на входящий эвент определённого типа реагировать созданием эвентного потока
     cmd1 = resonance.pipe.filter_event(events, rule1)
     resonance.createOutput(cmd1, 'Evtout1')
 
+    # это позволяет на входящий эвент определённого типа реагировать взятием эпохи
     cmd2 = resonance.pipe.filter_event(events, rule2)
 
     eeg_windowized = resonance.cross.windowize_by_events(eeg_filtered, cmd2, window_size, window_shift)
