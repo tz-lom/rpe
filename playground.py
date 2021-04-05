@@ -36,8 +36,8 @@ events_blocks = [
 si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
-proc = online_processing_4
-# r1 = resonance.run.offline(si, data, proc)
-# print(r1)
+proc = online_processing_5
+r1 = resonance.run.offline(si, data, proc)
+print(r1)
 r2 = resonance.run.online(si, data, proc, return_blocks=False)
 print(r2)

@@ -17,7 +17,7 @@ def online_processing_0():
 
 
 def makeEvent(block):
-    return str(np.max(block))
+    return np.max(block)
 
 
 def online_processing_1():
@@ -147,14 +147,10 @@ def online_processing_4():
 
 
 def online_processing_5():
-    import resonance.pipe
-    import scipy.signal as sp_sig
-
     eeg = resonance.input(0)
-    events = resonance.input(1)
 
-    cut_off_frequency = 2
-    low_pass_filter = sp_sig.butter(4, cut_off_frequency / eeg.SI.samplingRate * 2, btype='low')
-    eeg_filtered = resonance.pipe.filter(eeg, low_pass_filter)
+    eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
+    as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
+    conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 9)
 
-    resonance.createOutput(eeg_filtered, 'out')
+    resonance.createOutput(conditional, 'out')
