@@ -7,8 +7,8 @@ from pathlib import Path
 import os
 
 Cntr = 0
-PATH = Path('logs/')
-if not os.path.exists(PATH): os.makedirs(PATH)
+#PATH = Path('logs/')
+#if not os.path.exists(PATH): os.makedirs(PATH)
 
 def online_processing_0():
     import resonance
@@ -180,8 +180,8 @@ def online_processing_5():
 
     global Cntr
     if Cntr == 0:
-        ts = np.array([1])
-        np.savetxt(PATH/'test.txt', ts)
+        ts = np.array(eeg.TS)
+        np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts)
     Cntr = Cntr + 1
 
     eeg_windows = resonance.pipe.windowizer(eeg, 100, 100)
