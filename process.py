@@ -3,7 +3,12 @@ import resonance.pipe
 import resonance.cross
 import scipy.signal as sp_sig
 import numpy as np
+from pathlib import Path
+import os
 
+Cntr = 0
+PATH = Path('logs/')
+if not os.path.exists(PATH): os.makedirs(PATH)
 
 def online_processing_0():
     import resonance
@@ -169,11 +174,21 @@ def online_processing_4():
 
 
 def online_processing_5():
+    import numpy as np
+
     eeg = resonance.input(0)
 
-    eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
+    global Cntr
+    if Cntr == 0:
+        ts = np.array([1])
+        np.savetxt(PATH/'test.txt', ts)
+    Cntr = Cntr + 1
+
+    eeg_windows = resonance.pipe.windowizer(eeg, 100, 100)
+    #eeg_windows = np.array(eeg_windows)
     as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
-    conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 9)
+    #as_events = np.array(as_events)
+    conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 0)
 
     resonance.createOutput(conditional, 'out')
 
