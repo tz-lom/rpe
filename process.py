@@ -179,12 +179,15 @@ def online_processing_5():
     eeg = resonance.input(0)
 
     global Cntr
-    if Cntr == 0:
-        ts = np.array(eeg.TS)
-        np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts)
-    Cntr = Cntr + 1
 
     eeg_windows = resonance.pipe.windowizer(eeg, 100, 100)
+
+    if Cntr == 0:
+        #ts = np.array(eeg_windows.timestamps)
+        ts2 = eeg.timestamps
+        np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts2)
+    Cntr = Cntr + 1
+
     #eeg_windows = np.array(eeg_windows)
     as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
     #as_events = np.array(as_events)

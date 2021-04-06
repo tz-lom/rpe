@@ -35,7 +35,7 @@ def artificial_eeg2(sampling_rate, seconds, freq, chCnt = 1):
         data.append(resData)
     return si, data
 
-freq = [4.3]
+freq = [4.3, 10, 15]
 chnlCnt = len(freq)
 eeg_si, eeg_blocks = artificial_eeg2(500, 8, freq, chnlCnt)
 
