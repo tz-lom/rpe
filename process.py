@@ -6,9 +6,6 @@ import numpy as np
 from pathlib import Path
 import os
 
-Cntr = 0
-
-
 # PATH = Path('logs/')
 # if not os.path.exists(PATH): os.makedirs(PATH)
 
@@ -193,27 +190,51 @@ class ConditionalEventNotTooOften:
 
 def online_processing_5():
     import numpy as np
-
     eeg = resonance.input(0)
 
-    global Cntr
+    eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
 
-    eeg_windows = resonance.pipe.windowizer(eeg, 100, 100)
-
-    if Cntr == 0:
-        # ts = np.array(eeg_windows.timestamps)
-        ts2 = eeg.TS
-        # np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts2)
-    Cntr = Cntr + 1
-
+    # ts = np.array(eeg_windows.timestamps)
+    ts2 = eeg.TS
+    # np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts2)
     # eeg_windows = np.array(eeg_windows)
     as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
     # as_events = np.array(as_events)
-
-    conditional = resonance.pipe.filter_event(as_events, ConditionalEventNotTooOften(0, 2))
+    #conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 0)
+    evt = ConditionalEventNotTooOften(0, 2)
+    conditional = resonance.pipe.filter_event(as_events, evt)
 
     resonance.createOutput(conditional, 'out')
 
+
+def online_processing_5_1():
+    import numpy as np
+    eeg = resonance.input(0)
+
+    eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
+    as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
+    #conditional = resonance.pipe.filter_event(as_events, lambda evt: float(evt) > 0)
+    evt = ConditionalEventNotTooOften(0, 2)
+    conditional = resonance.pipe.filter_event(as_events, evt)
+
+    window_size = 250
+    window_shift = -250
+    baseline_begin_offset = 0
+    baseline_end_offset = 100
+    eeg_windowized = resonance.cross.windowize_by_events(eeg, conditional, window_size, window_shift)
+    baselined = resonance.pipe.baseline(eeg_windowized, slice(baseline_begin_offset, baseline_end_offset))
+    result_ = resonance.pipe.transform_to_event(baselined, makeEvent)
+
+    '''
+    думал по условию брать baselined массив и пихать его в список примеров, которые потом будут подаваться классификатору
+    Но в этой ф-ции так просто это не сделать
+    Правильно ли я понял, что нужен какой-то класс, который будет прокручиваться из недр прцессинга и указываться как параметр? 
+    '''
+
+    #как делать логи тоже не понял пока
+    res_events = np.array(result_)
+    np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test1.txt', res_events)
+    resonance.createOutput(result_, 'Evtout2')
 
 # селективная фильтрация каналов + корректировка ЭЭГ на референт
 def online_processing_6():
@@ -225,8 +246,7 @@ def online_processing_6():
 
     np_eye = np.eye(allData.SI.channels)  # единичная матрица - основа пространственной фильтрации
 
-    sptl_filtr0 = np_eye[...,
-                  :-1]  # 2 последний канал - эвентный канал, убираем его из списка каналов (убираем из единичной матрицы крайний столбец)
+    sptl_filtr0 = np_eye[...,:-1]  # 2 последний канал - эвентный канал, убираем его из списка каналов (убираем из единичной матрицы крайний столбец)
     woEvtChnlData = resonance.pipe.spatial(allData, sptl_filtr0)
 
     bandstop_frequency = 50  # применяем режектор 50Гц для всех данных, кроме эвентного канала
@@ -238,8 +258,7 @@ def online_processing_6():
 
     np_eye2 = np.eye(allData.SI.channels - 1)  # единичная матрица для всех каналов минус эвентный канал
 
-    sptl_filtr = np_eye2[...,
-                 :-1]  # оставляем только ЭЭГ, убираем последний канал - это ЭМГ (убираем из единичной матрицы крайний столбец)
+    sptl_filtr = np_eye2[...,:-1]  # оставляем только ЭЭГ, убираем последний канал - это ЭМГ (убираем из единичной матрицы крайний столбец)
     eegData = resonance.pipe.spatial(woEvtChnldata_Notchfiltered, sptl_filtr)
     sptl_filtr2 = np_eye2[..., -1:]  # оставляем последний столбец - для отдельной фильтрации ЭМГ канала
     emgData = resonance.pipe.spatial(woEvtChnldata_Notchfiltered, sptl_filtr2)
@@ -257,8 +276,7 @@ def online_processing_6():
     # уже фильтрованную ЭЭГ корректируем на референт, в качестве которого возьмём 1й канал
     np_eye3 = np.eye(allData.SI.channels - 2)  # единичная матрица для всех каналов минус эвентный канал и минус ЭМГ
     np_eye3[0, ...] = -1  # готовим матрицу, чтобы 1й канал вычесть из остальных (нулевая строка = -1)
-    sptl_filtr4 = np_eye3[...,
-                  1:]  # первый канал - это референт, убираем его из списка каналов (Убираем первый столбец матрицы)
+    sptl_filtr4 = np_eye3[...,1:]  # первый канал - это референт, убираем его из списка каналов (Убираем первый столбец матрицы)
     eeg_Filtered_Referenced = resonance.pipe.spatial(eeg_LPHPfiltered, sptl_filtr4)
     resonance.createOutput(eeg_LPHPfiltered, 'EEG_Filtered_Referenced')
 
