@@ -5,6 +5,7 @@ import resonance.pipe
 import resonance.cross
 import resonance.db
 from process import *
+from MainProcess import *
 
 
 def interleave_blocks(blocks):
@@ -35,24 +36,26 @@ def artificial_eeg2(sampling_rate, seconds, freq, chCnt = 1):
         data.append(resData)
     return si, data
 
-freq = [4.3, 10, 15]
+#freq = [4.3, 10, 15]
+freq = [4.3, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 1]
 chnlCnt = len(freq)
-eeg_si, eeg_blocks = artificial_eeg2(500, 8, freq, chnlCnt)
+eeg_si, eeg_blocks = artificial_eeg2(500, 10, freq, chnlCnt)
 
 #eeg_si, eeg_blocks = artificial_eeg(500, 8, 4.3)
 events_si = resonance.si.Event()
 events_blocks = [
-    resonance.db.Event(events_si, 1.1e9, '1'),
-    resonance.db.Event(events_si, 5.4e9, '2'),
-    resonance.db.Event(events_si, 5.6e9, '1'),
-    resonance.db.Event(events_si, 6.4e9, '3')
+    resonance.db.Event(events_si, 3.1e9, '1')
+    #resonance.db.Event(events_si, 5.4e9, '2')
+    #resonance.db.Event(events_si, 5.6e9, '1'),
+    #resonance.db.Event(events_si, 6.4e9, '3')
 ]
 
 si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
-proc = online_processing_5
-r1 = resonance.run.offline(si, data, proc)
+proc = online_processing_4_1
+proc2 = online_processing
+r1 = resonance.run.offline(si, data, proc2)
 print(r1)
-r2 = resonance.run.online(si, data, proc, return_blocks=False)
+r2 = resonance.run.online(si, data, proc2, return_blocks=False)
 print(r2)

@@ -6,6 +6,8 @@ import numpy as np
 from pathlib import Path
 import os
 
+WorkState = "1"
+
 # PATH = Path('logs/')
 # if not os.path.exists(PATH): os.makedirs(PATH)
 
@@ -172,6 +174,49 @@ def online_processing_4():
     cmd3 = resonance.pipe.filter_event(events, lambda evt: not (rule1(evt) or rule2(evt)))
     resonance.createOutput(cmd3, 'Evtout3')
 
+def SetWorkState(evt):
+    global WorkState
+    if (evt == "1"):
+        WorkState = '123'
+    elif (evt == "2"):
+        WorkState = '000'
+    return True
+
+class ConditionalEventNotTooOften2:
+    def __init__(self, threshold, delay):
+        self._threshold = threshold
+        self._delay = delay
+        self._last_event = -np.Infinity
+
+    def __call__(self, evt):
+        if WorkState == "123":
+            if float(evt > self._threshold):
+                current_ts = evt.timestamps[-1]
+                if self._last_event < current_ts - self._delay * 1e9:  # minimal delay between events = 2 seconds
+                    self._last_event = current_ts
+                    return True
+        return False
+
+def online_processing_4_1():
+    eeg = resonance.input(0)
+    events = resonance.input(1)
+    cmd1 = resonance.pipe.filter_event(events, SetWorkState)
+    resonance.createOutput(cmd1, 'EvtWorkState')
+
+    eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
+    as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
+    evt = ConditionalEventNotTooOften2(0, 2)
+    conditional = resonance.pipe.filter_event(as_events, evt)
+    #resonance.createOutput(conditional, 'Evtout')
+
+    window_size = 50
+    window_shift = -50
+    baseline_begin_offset = 0
+    baseline_end_offset = 50
+    eeg_windowized = resonance.cross.windowize_by_events(eeg, conditional, window_size, window_shift)
+    baselined = resonance.pipe.baseline(eeg_windowized, slice(baseline_begin_offset, baseline_end_offset))
+    result_ = resonance.pipe.transform_to_event(baselined, makeEvent)
+    resonance.createOutput(result_, 'Evtout')
 
 class ConditionalEventNotTooOften:
     def __init__(self, threshold, delay):
@@ -195,7 +240,7 @@ def online_processing_5():
     eeg_windows = resonance.pipe.windowizer(eeg, 10, 10)
 
     # ts = np.array(eeg_windows.timestamps)
-    ts2 = eeg.TS
+    # ts2 = eeg.TS
     # np.savetxt('d:/Projects/BCI_EyeLines_Online_2020/rpe/test.txt', ts2)
     # eeg_windows = np.array(eeg_windows)
     as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
@@ -206,6 +251,13 @@ def online_processing_5():
 
     resonance.createOutput(conditional, 'out')
 
+def makeEvent2(block):
+    '''
+    with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/test4.txt", "at") as f:
+        f.write("\n")
+        np.savetxt(f, block)
+    '''
+    return np.max(block)
 
 def online_processing_5_1():
     import numpy as np
@@ -217,13 +269,13 @@ def online_processing_5_1():
     evt = ConditionalEventNotTooOften(0, 2)
     conditional = resonance.pipe.filter_event(as_events, evt)
 
-    window_size = 250
-    window_shift = -250
+    window_size = 50
+    window_shift = -50
     baseline_begin_offset = 0
-    baseline_end_offset = 100
+    baseline_end_offset = 50
     eeg_windowized = resonance.cross.windowize_by_events(eeg, conditional, window_size, window_shift)
     baselined = resonance.pipe.baseline(eeg_windowized, slice(baseline_begin_offset, baseline_end_offset))
-    result_ = resonance.pipe.transform_to_event(baselined, makeEvent)
+    result_ = resonance.pipe.transform_to_event(baselined, makeEvent2)
 
     '''
     думал по условию брать baselined массив и пихать его в список примеров, которые потом будут подаваться классификатору
@@ -278,7 +330,7 @@ def online_processing_6():
     np_eye3[0, ...] = -1  # готовим матрицу, чтобы 1й канал вычесть из остальных (нулевая строка = -1)
     sptl_filtr4 = np_eye3[...,1:]  # первый канал - это референт, убираем его из списка каналов (Убираем первый столбец матрицы)
     eeg_Filtered_Referenced = resonance.pipe.spatial(eeg_LPHPfiltered, sptl_filtr4)
-    resonance.createOutput(eeg_LPHPfiltered, 'EEG_Filtered_Referenced')
+    resonance.createOutput(eeg_Filtered_Referenced, 'EEG_Filtered_Referenced')
 
     # для ЭМГ применим только фильтр высоких частот
     highpass_frequency = 5
