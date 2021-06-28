@@ -1,2 +1,2 @@
-cd ./condaenv/bin
-call ./quickStimulus_mingw_32.bat
+cd ./condaenv64/bin
+call ./quickStimulus_mingw_64.bat

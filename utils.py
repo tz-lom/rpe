@@ -5,13 +5,20 @@ import pickle
 import sys
 import json
 import operator
+import os
 
 
-def read_params(path_to_config):
-    config = path_to_config
-    if len(sys.argv) == 2:
-        config = sys.argv[1]
-    with open(config) as f:
+def read_params(configFileName):
+    #config = path_to_config
+    #if len(sys.argv) == 2:
+    #    config = sys.argv[1]
+    #path = os.getcwd()
+    #parentPath = os.path.join(path, os.pardir)
+    #path_to_config = os.path.join(parentPath, configFileName)
+
+    path_to_config = os.path.join(os.path.dirname(__file__), configFileName)
+
+    with open(path_to_config) as f:
         config = json.load(f)
     return config
 

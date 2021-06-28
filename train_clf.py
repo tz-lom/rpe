@@ -6,20 +6,17 @@ import numpy as np
 import time
 from keras.utils import to_categorical
 
-
 def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mode = False, plot_fold_history=True):
-    '''
-    :param x_tr_val:
-    :param y_tr_val:
-    :param model:
-    :param model_path:
-    :param max_epochs:
-    :param block_mode:
-    :param plot_fold_history:
-    :return:
-    '''
-
-    model.save_weights('tmp.h5')  # Nasty hack. This weights will be used to reset model
+    #:param x_tr_val:
+    #:param y_tr_val:
+    #:param model:
+    #:param model_path:
+    #:param max_epochs:
+    #:param block_mode:
+    #:param plot_fold_history:
+    #:return:
+    modelWeightsFileName = os.path.join(os.path.dirname(__file__), 'tmp.h5')
+    model.save_weights(modelWeightsFileName)  # Nasty hack. This weights will be used to reset model
     #same_subj_auc = AucMetricHistory()
 
     best_val_auc_epochs = []
@@ -64,7 +61,7 @@ def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mo
         os.makedirs(fold_model_path)
         # make_checkpoint = ModelCheckpoint(os.path.join(fold_model_path, '{epoch:02d}.hdf5'),
         #                                   monitor='val_loss', verbose=0, save_best_only=False, mode='auto')
-        model.load_weights('tmp.h5') # Rest model on each fold
+        model.load_weights(modelWeightsFileName) # Rest model on each fold
         x_tr_fold,y_tr_fold = x_tr_val[train_idx],y_tr_val[train_idx]
         x_val_fold, y_val_fold = x_tr_val[val_idx], y_tr_val[val_idx]
         same_subj_auc = AucMetricHistory(validation_data=(x_val_fold, y_val_fold))
@@ -82,7 +79,7 @@ def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mo
             single_auc_loging(val_history.history, 'fold %d' % fold, fold_model_path)
 
     # Test  performance (Naive, until best epoch
-    model.load_weights('tmp.h5')  # Rest model before traning on train+val
+    model.load_weights(modelWeightsFileName)  # Rest model before traning on train+val
 
     model.fit(x_tr_val, y_tr_val,
               epochs=int(np.mean(best_val_loss_epochs)),
@@ -90,16 +87,15 @@ def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mo
               shuffle=True)
 
     model.save(os.path.join(model_path, 'final_%d.hdf5' %int(np.mean(best_val_loss_epochs))))
-    os.remove('tmp.h5')
+    os.remove(modelWeightsFileName)
     return model, np.mean(best_val_aucs)
 
 
 # class ResonanceClassifier(object):
 #     def __init__(self,path_to_config,num_channels,num_samples):
-#         '''
 #
-#         :param path_to_config: path to json file with parameters
-#         '''
+#         #:param path_to_config: path to json file with parameters
+#
 #         parameters = read_params(path_to_config)
 #         self.network_hp = parameters['classifier_hyperparameters']
 #         self.resampled_to = parameters['resample_to']
@@ -108,10 +104,8 @@ def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mo
 #
 #
 #     def fit(self,x,y):
-#         '''
-#         :param x: EEG [trials x channels x samples]
+#         #:param x: EEG [trials x channels x samples]
 #
-#         '''
 #     def predict(self,x):
 
 def create_model(params, num_channels, num_samples):
@@ -132,7 +126,7 @@ def train_model(epochs, labels):
     model  = create_model(params=params, num_channels=epochs.shape[1],num_samples=epochs.shape[2])
 
     path_to_models_dir = params['path_to_models_dir']
-    path_to_model = os.path.join(path_to_models_dir,str(int(time.time())))
+    path_to_model = os.path.join(os.path.dirname(__file__), path_to_models_dir, str(int(time.time())))
     max_epochs = params['max_epochs']
     labels = to_categorical(labels,2)
     epochs = epochs[:,np.newaxis,:,:]

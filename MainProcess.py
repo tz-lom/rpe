@@ -9,13 +9,18 @@ from enum import Enum
 from mne.filter import resample
 from sklearn.model_selection import train_test_split
 from train_clf import train_model
+import os
 
 class WS(Enum):
     None_ = 0
     NeedEpochingForTraining = 1
     NeedPrepareEpochs = 2
     NeedTraining = 3
-    ClassifierApplication = 4
+    PrepareForClassifierApply = 4
+    TooFewEpochsForTraining = 5
+    ClassifierApply = 6
+
+Trained_model = None
 
 WorkState = WS.None_
 
@@ -27,6 +32,8 @@ Y_Tr = []
 
 X_Tst = []
 Y_Tst = []
+
+ClassifierPrepared = False
 
 # селективная фильтрация каналов + корректировка ЭЭГ на референт
 def FiltrationAndRefCorrection(allData):
@@ -74,11 +81,21 @@ def FiltrationAndRefCorrection(allData):
 
 def worker():
     """thread worker function"""
-    trained_model, val_auc = train_model(X_Tr, Y_Tr)
+    global X_Tr, Y_Tr
+    logFileName = os.path.join(os.path.dirname(__file__), "workerStart.txt")
+    with open(logFileName, "at") as f:
+        f.write("Y_Tr:\n")
+        np.savetxt(f, Y_Tr, fmt='%.1d', delimiter=',', newline='')
+
+    global Trained_model
+
+    Trained_model, val_auc = train_model(X_Tr, Y_Tr)
     val_auc = np.array(val_auc)
-    with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/train_model.txt", "at") as f:
+    logFileName = os.path.join(os.path.dirname(__file__), "train_model.txt")
+    with open(logFileName, "at") as f:
         f.write("val_auc:\n")
         np.savetxt(f, [val_auc], fmt='%.18g')
+
     return
 
 #меняем рабочий статус системы согласно входящим командам
@@ -90,15 +107,16 @@ def UpdateWorkState(evt):
         WorkState = WS.NeedPrepareEpochs
         global X_Tr, Y_Tr, X_Tst, Y_Tst
         X_Tr, Y_Tr, X_Tst, Y_Tst = EpochsPrepare(X_Epochs, Y_Epochs)
-
-        with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/AllEpochsTS.txt", "at") as f:
+        logFileName = os.path.join(os.path.dirname(__file__), "AllEpochsTS.txt")
+        with open(logFileName, "at") as f:
             ts = []
             for item in X_Epochs:
                 ts.append(item.timestamps[-1])
             ts = np.array(ts)
             np.savetxt(f, np.column_stack([ts, Y_Epochs]), fmt='%.18g')
         #записать в лог сколько подготовлено эпох и каковы их классы
-        with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/PrepareEpochs.txt", "at") as f:
+        logFileName = os.path.join(os.path.dirname(__file__), "PrepareEpochs.txt")
+        with open(logFileName, "at") as f:
             f.write("PrepareEpochs\n")
             f.write("TrainingEpochsCnt: ")
             np.savetxt(f, [len(X_Tr)], fmt='%.1d')
@@ -112,14 +130,33 @@ def UpdateWorkState(evt):
         #лучше потом в управляющую прогу заслать значения
     elif (evt == "3"):
         #Надо проверять, если ли возможность обучать классификатор
-        if len(Y_Tr) > 0:
+        if len(Y_Tr) > 10: #!! вынести в настройки - минимальное кол-во обучающих эпох
             WorkState = WS.NeedTraining
+            '''
+            with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/workerStart.txt", "at") as f:
+                f.write("Y_Tr:\n")
+                np.savetxt(f, Y_Tr, fmt='%.1d', delimiter=',', newline='')
+            Trained_model, val_auc = train_model(X_Tr, Y_Tr)
+            val_auc = np.array(val_auc)
+            with open("d:/Projects/BCI_EyeLines_Online_2020/rpe/train_model.txt", "at") as f:
+                f.write("val_auc:\n")
+                np.savetxt(f, [val_auc], fmt='%.18g')
+            '''
             task = threading.Thread(target=worker)
             task.start()
         else:
+            WorkState = WS.TooFewEpochsForTraining
             return False
     elif (evt == "4"):
-        WorkState = WS.ClassifierApplication
+        WorkState = WS.PrepareForClassifierApply
+        global Trained_model
+        global ClassifierPrepared
+        if Trained_model is None:
+            ClassifierPrepared = False
+        else:
+            ClassifierPrepared = True
+    elif (evt == "6"):
+        WorkState = WS.ClassifierApply
 
     return True
 
@@ -138,7 +175,7 @@ class GetEventsForUntargetedEpochs:
                 if self._last_event < current_ts - self._delay * 1e9:  # minimal delay between events = 2 seconds
                     self._last_event = current_ts #берём подходящий по амплитуде эвент, только если он по времени больше заданного интервала
                     return True
-        elif WorkState == WS.ClassifierApplication:
+        elif WorkState == WS.ClassifierApply:
             if float(abs(evt) < self._threshold):
                 return True
         return False
@@ -220,21 +257,28 @@ def makeEvtAndAddUntargetEpochToList(block):
         X_Epochs.append(block)
         Y_Epochs.append(0)
 
-        return 111
+        return len(np.where(np.array(Y_Epochs) == 0)[0])
     elif WorkState == WS.NeedPrepareEpochs:
         return 123
-    elif WorkState == WS.ClassifierApplication:
-        resample_to = 369
-        sourceSR = 500  # переделать потом! сделать класс и передавать SR в него в init
-        dataResampled = _resample(np.array(block), sourceSR, resample_to)
-        '''
-        predictions = model.predict(dataResampled)[:, 1]
-        if predictions == 1
-            return 555
-        else
-            return 0        
-        '''
-        return 345
+    elif WorkState == WS.ClassifierApply:
+        global ClassifierPrepared
+        if ClassifierPrepared:
+            resample_to = 369
+            sourceSR = 500  # переделать потом! сделать класс и передавать SR в него в init
+            dataResampled = _resample(np.array(block), sourceSR, resample_to)
+            dataResampled = dataResampled.transpose([1, 0])#исходно строки - отсчёта, столбцы - каналы. Надо наоборот
+            dataResampled = dataResampled[np.newaxis, np.newaxis, :, :]
+            global Trained_model
+            predictions = Trained_model.predict(dataResampled)[:, 1]
+            return predictions[0]
+            '''
+            if predictions > 0.6:
+                return 555
+            else:
+                return 0   
+            '''
+        else:
+            return 345
     return abs(np.max(block))
 
 def makeEvtAndAddTargetEpochToList(block):
@@ -259,7 +303,7 @@ def makeEvtAndAddTargetEpochToList(block):
 
         X_Epochs.append(block)
         Y_Epochs.append(1)
-    return abs(np.max(block))
+    return len(np.where(np.array(Y_Epochs) == 1)[0])
 
 def online_processing():
     alldata = resonance.input(0)
@@ -273,17 +317,17 @@ def online_processing():
     cmd_input = resonance.pipe.filter_event(events, UpdateWorkState)
     resonance.createOutput(cmd_input, 'EvtWorkState')#входящие команды эхом отправляем в эвентный поток для контроля
 
-    window_size = 50
-    window_shift = -50
+    window_size = 200
+    window_shift = -200
     baseline_begin_offset = 0
-    baseline_end_offset = 50
+    baseline_end_offset = 100
     thresholdForEEGInVolts = 20#0.0005  # пороговая амплитуда помехи для оценки кандидата на нецелевую эпоху
     thresholdForEMGInVolts = 0.1#0.05  # пороговая амплитуда ЭМГ для оценки кандидата на целевую эпоху
     intervalEvtToEvtInSec = 3  # интервал между кандидатами на целевую/нецелевую эпоху, сек
 
     #Формируем эпохи для нецелевого класса
     #просмотр шинкованной ЭЭГ на предмет кандидатов на формирование нецелевых эпох
-    eeg_windows = resonance.pipe.windowizer(eeg_Filtered_Referenced, 10, 10)#шинкуем ЭЭГ на мелкие окна
+    eeg_windows = resonance.pipe.windowizer(eeg_Filtered_Referenced, 50, 50)#шинкуем ЭЭГ на мелкие окна
     eeg_as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
     eeg_windowized = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, eeg_as_events, window_size, window_shift)
     EvtsMaxAmplitudes = resonance.pipe.transform_to_event(eeg_windowized, makeEvent)  # считаем максимумы амплитуд во взятых окнах
@@ -299,7 +343,7 @@ def online_processing():
     #та же история взятия эпох для подачи обученному классификатору, только тогда intervalEvtToEvtInSec=0
 
     # Формируем целевые эпохи на основе порога амплитуды ЭМГ, интервалов между эвентами и безартефактности взятого окна ЭЭГ
-    emg_windows = resonance.pipe.windowizer(emg_Notch_HPFiltered, 10, 10)#шинкуем ЭМГ на мелкие окна
+    emg_windows = resonance.pipe.windowizer(emg_Notch_HPFiltered, 50, 50)#шинкуем ЭМГ на мелкие окна
     emg_as_events = resonance.pipe.transform_to_event(emg_windows, makeEvent)
     intervalEvtToEvtInSec = 2.9
     evt1 = GetEventsForTargetedEpochs(thresholdForEMGInVolts, intervalEvtToEvtInSec)#экземпляр получит значение, только в режиме NeedEpoching

@@ -5,7 +5,8 @@ import resonance.pipe
 import resonance.cross
 import resonance.db
 from process import *
-from MainProcess import *
+import MainProcess
+import h5py
 
 
 def interleave_blocks(blocks):
@@ -42,7 +43,7 @@ def artificial_eeg2(sampling_rate, seconds, freq, chCnt = 1):
     return si, data
 
 #freq = [4.3, 10, 15]
-# имитация расклада 32 канала ЭЭГ, последние два канала ЭМГ и эвентный канал
+# имитация расклада 32 канала ЭЭГ, последние два канала - ЭМГ и эвентный канал
 freq = [11, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 70, 1]
 chnlCnt = len(freq)
 eeg_si, eeg_blocks = artificial_eeg2(500, 80, freq, chnlCnt)
@@ -54,14 +55,20 @@ events_blocks = [
     #resonance.db.Event(events_si, 5.4e9, '2')
     #resonance.db.Event(events_si, 5.6e9, '1'),
     resonance.db.Event(events_si, 79.4e9, '2'),
-    resonance.db.Event(events_si, 79.8e9, '3')
+    resonance.db.Event(events_si, 79.8e9, '3'),
+    resonance.db.Event(events_si, 83.8e9, '5')
 ]
 
 si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
-proc = online_processing_4_1
-proc2 = online_processing
+f = h5py.File('d:/Projects/BCI_EyeLines_Online_2020/rpe\Data/test1.hdf','r')
+data_ = list(f.keys())
+data_2 = f['EEG']
+print(data_2)
+
+#proc = online_processing_4_1
+proc2 = MainProcess.online_processing
 #r1 = resonance.run.offline(si, data, proc2)
 #print(r1)
 r2 = resonance.run.online(si, data, proc2, return_blocks=False)
