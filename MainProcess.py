@@ -10,6 +10,9 @@ from mne.filter import resample
 from sklearn.model_selection import train_test_split
 from train_clf import train_model
 import os
+from utils import read_params
+import glob
+from keras.models import load_model
 
 class WS(Enum):
     None_ = 0
@@ -98,6 +101,24 @@ def worker():
 
     return
 
+def loadModelThread():
+    global Trained_model
+    params = read_params('config.json')
+    path_to_models_dir = params['path_to_models_dir']
+    path_to_model = os.path.dirname(__file__) + path_to_models_dir + '/**/*.hdf5'
+    filename_list = glob.glob(path_to_model)
+    if len(filename_list) > 0:
+        filename_ = filename_list[-1]
+        Trained_model = load_model(filename_)
+
+    global ClassifierPrepared
+    if Trained_model is None:
+        ClassifierPrepared = False
+    else:
+        ClassifierPrepared = True
+
+    return
+
 #меняем рабочий статус системы согласно входящим командам
 def UpdateWorkState(evt):
     global WorkState
@@ -149,12 +170,10 @@ def UpdateWorkState(evt):
             return False
     elif (evt == "4"):
         WorkState = WS.PrepareForClassifierApply
-        global Trained_model
-        global ClassifierPrepared
-        if Trained_model is None:
-            ClassifierPrepared = False
-        else:
-            ClassifierPrepared = True
+
+        task = threading.Thread(target = loadModelThread)#загрузка обученной модели из файла
+        task.start()
+
     elif (evt == "6"):
         WorkState = WS.ClassifierApply
 
