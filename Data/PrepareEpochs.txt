@@ -1,0 +1,7 @@
+PrepareEpochs
+TrainingEpochsCnt: 23
+Y_TrainingEpochs: 
+00100000110100110110100
+TstEpochsCnt: 6
+Y_TstEpochs: 
+010001

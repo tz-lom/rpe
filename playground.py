@@ -52,7 +52,7 @@ eeg_si, eeg_blocks = artificial_eeg2(500, 80, freq, chnlCnt)
 events_si = resonance.si.Event()
 events_blocks = [
     resonance.db.Event(events_si, 0.1e9, '1'),
-    #resonance.db.Event(events_si, 5.4e9, '2')
+    #resonance.db.Event(events_si, 5.4e9, '2'),
     #resonance.db.Event(events_si, 5.6e9, '1'),
     resonance.db.Event(events_si, 79.4e9, '2'),
     resonance.db.Event(events_si, 79.8e9, '3'),
@@ -62,10 +62,10 @@ events_blocks = [
 si = [eeg_si, events_si]
 data = interleave_blocks(eeg_blocks + events_blocks)
 
-f = h5py.File('d:/Projects/BCI_EyeLines_Online_2020/rpe\Data/test1.hdf','r')
-data_ = list(f.keys())
-data_2 = f['EEG']
-print(data_2)
+# f = h5py.File('d:/Projects/BCI_EyeLines_Online_2020/rpe\Data/test1.hdf','r')
+# data_ = list(f.keys())
+# data_2 = f['EEG']
+# print(data_2)
 
 #proc = online_processing_4_1
 proc2 = MainProcess.online_processing

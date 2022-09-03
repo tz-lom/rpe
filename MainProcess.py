@@ -10,9 +10,10 @@ from mne.filter import resample
 from sklearn.model_selection import train_test_split
 from train_clf import train_model
 import os
-from utils import read_params
+from utils import read_params, write_params
 import glob
 from keras.models import load_model
+import vars
 
 class WS(Enum):
     None_ = 0
@@ -22,10 +23,14 @@ class WS(Enum):
     PrepareForClassifierApply = 4
     TooFewEpochsForTraining = 5
     ClassifierApply = 6
+    SettingsChanged = 7
+    Reserved = 8
 
 Trained_model = None
 
 WorkState = WS.None_
+
+TSFirstDataValue = 0;
 
 X_Epochs = []
 Y_Epochs = []
@@ -127,17 +132,29 @@ def UpdateWorkState(evt):
     elif (evt == "2"):
         WorkState = WS.NeedPrepareEpochs
         global X_Tr, Y_Tr, X_Tst, Y_Tst
+        #почему нет объявления global X_Epochs global Y_Epochs ? Нихрена не понятно
         X_Tr, Y_Tr, X_Tst, Y_Tst = EpochsPrepare(X_Epochs, Y_Epochs)
+        #для контроля эпох в матлабе: открываем там ЭЭГ и текстовый файл с метками времен
         logFileName = os.path.join(os.path.dirname(__file__), "AllEpochsTS.txt")
-        with open(logFileName, "at") as f:
+        with open(logFileName, "wt") as f:
+            ts0 = []
             ts = []
             for item in X_Epochs:
-                ts.append(item.timestamps[-1])
+                ts0.append(item.timestamps[0])
+                ts.append(item.timestamps[-1]) #- TSFirstDataValue)/1000000000)
+            ts0 = np.array(ts0)
             ts = np.array(ts)
-            np.savetxt(f, np.column_stack([ts, Y_Epochs]), fmt='%.18g')
+            f.write("latency type position\n")
+            array_1d = np.ones(len(Y_Epochs))
+            np.savetxt(f, np.column_stack([ts0, Y_Epochs, array_1d]), fmt='%.18g')
+            Y_Epochs_ = []
+            # for item in Y_Epochs:
+            #     Y_Epochs_.append(item + 10)
+            array2_1d = np.full(len(Y_Epochs),2)
+            np.savetxt(f, np.column_stack([ts, Y_Epochs, array2_1d]), fmt='%.18g')
         #записать в лог сколько подготовлено эпох и каковы их классы
         logFileName = os.path.join(os.path.dirname(__file__), "PrepareEpochs.txt")
-        with open(logFileName, "at") as f:
+        with open(logFileName, "wt") as f:
             f.write("PrepareEpochs\n")
             f.write("TrainingEpochsCnt: ")
             np.savetxt(f, [len(X_Tr)], fmt='%.1d')
@@ -177,6 +194,26 @@ def UpdateWorkState(evt):
     elif (evt == "6"):
         WorkState = WS.ClassifierApply
 
+    elif (evt == "7"):
+        '''считывание настроек из файла, в который они сохраняются из полей контролов'''
+        tmpVar = WorkState
+        #WorkState = WS.SettingsChanged
+        params = read_params('bin\SStim.json')
+
+        vars.window_size = params['window_size']
+        vars.window_shift = params['window_shift']
+        vars.baseline_begin_offset = params['baseline_begin_offset']
+        vars.baseline_end_offset = params['baseline_end_offset']
+        vars.thresholdForEEGInVolts = params['thresholdForEEGInVolts']  # пороговая амплитуда помехи для оценки кандидата на нецелевую эпоху 500мкВ
+        vars.thresholdForEMGInVolts = params['thresholdForEMGInVolts']  # пороговая амплитуда ЭМГ для оценки кандидата на целевую эпоху
+        vars.intervalEvtToEvtInSec = params['intervalEvtToEvtInSec']  # интервал между кандидатами на целевую/нецелевую эпоху, сек
+        #WorkState = tmpVar
+
+    elif (evt == "8"):
+        params = read_params('bin\SStim.json')
+        param1 = params['intervalEvtToEvtInSec']
+        WorkState = param1
+
     return True
 
 #просмотр максимумов шинкованных микроокон и выбор кандидатов на взятие окна для нецелевого класса
@@ -191,13 +228,25 @@ class GetEventsForUntargetedEpochs:
             #смотрим амплитуды по порогу
             if float(abs(evt) < self._threshold):
                 current_ts = evt.timestamps[-1]
-                if self._last_event < current_ts - self._delay * 1e9:  # minimal delay between events = 2 seconds
+                if self._last_event < current_ts - self._delay * 1e9:  # minimal delay between events = T seconds
                     self._last_event = current_ts #берём подходящий по амплитуде эвент, только если он по времени больше заданного интервала
                     return True
         elif WorkState == WS.ClassifierApply:
             if float(abs(evt) < self._threshold):
                 return True
         return False
+
+class GetFirstTSData:
+    def __init__(self, needTS):
+        self._needTS = needTS
+    def __call__(self, evt):
+        if self._needTS == True:
+            global TSFirstDataValue
+            TSFirstDataValue = evt.timestamps[0]
+            self._needTS = False
+            return True
+        return False
+
 
 class CheckEvtsForAmplitudeThreshold:
     def __init__(self, threshold):
@@ -262,19 +311,21 @@ def makeEvtAndAddUntargetEpochToList(block):
         '''
         global X_Epochs
         global Y_Epochs
+        _delay = 2  # чтобы не было коллизий с крайней эпохой; выдерживается интервал между нецелевыми и целевыми эпохами !!! вынести в глобальную переменную, что ли?
 
         if (len(X_Epochs) > 0) and (len(Y_Epochs) > 0):
             predEpoch = X_Epochs[-1]
-            _delay = 1 #!!! вынести в глобальную переменную, что ли?
-            # если время начала новой эпохи минус время конца эпохи в списке меньше заданного интервала, удаляем данную эпоху из списка
-            endDTNewEpoch = block.timestamps[-1]#время конца новой эпохи
+            # если время начала новой эпохи минус время конца эпохи в списке больше заданного интервала, добавляем данную эпоху в список
+            bgnDTNewEpoch = block.timestamps[0]#время начала новой эпохи
             endDTOldEpoch = predEpoch.timestamps[-1]#время конца крайней в списке эпохи
-            if endDTNewEpoch - endDTOldEpoch < _delay * 1e9:
-                X_Epochs.pop(-1)
-                Y_Epochs.pop(-1)
-
-        X_Epochs.append(block)
-        Y_Epochs.append(0)
+            if bgnDTNewEpoch - endDTOldEpoch > _delay * 1e9:
+                # X_Epochs.pop(-1)# по факту удаляется предыдущая эпоха! Так было раньше 07.12.2021
+                # Y_Epochs.pop(-1)
+                X_Epochs.append(block)
+                Y_Epochs.append(0)
+        else:
+            X_Epochs.append(block)
+            Y_Epochs.append(0)
 
         return len(np.where(np.array(Y_Epochs) == 0)[0])
     elif WorkState == WS.NeedPrepareEpochs:
@@ -326,7 +377,6 @@ def makeEvtAndAddTargetEpochToList(block):
 
 def online_processing():
     alldata = resonance.input(0)
-
     eeg_Filtered_Referenced, emg_Notch_HPFiltered = FiltrationAndRefCorrection(alldata)# селективная фильтрация каналов + корректировка ЭЭГ на референт
     resonance.createOutput(eeg_Filtered_Referenced, 'EEG_Filtered_Referenced')
     resonance.createOutput(emg_Notch_HPFiltered, 'EMG_Notch_HPFiltered')
@@ -336,26 +386,21 @@ def online_processing():
     cmd_input = resonance.pipe.filter_event(events, UpdateWorkState)
     resonance.createOutput(cmd_input, 'EvtWorkState')#входящие команды эхом отправляем в эвентный поток для контроля
 
-    window_size = 200
-    window_shift = -200
-    baseline_begin_offset = 0
-    baseline_end_offset = 100
-    thresholdForEEGInVolts = 20#0.0005  # пороговая амплитуда помехи для оценки кандидата на нецелевую эпоху
-    thresholdForEMGInVolts = 0.1#0.05  # пороговая амплитуда ЭМГ для оценки кандидата на целевую эпоху
-    intervalEvtToEvtInSec = 3  # интервал между кандидатами на целевую/нецелевую эпоху, сек
-
     #Формируем эпохи для нецелевого класса
     #просмотр шинкованной ЭЭГ на предмет кандидатов на формирование нецелевых эпох
     eeg_windows = resonance.pipe.windowizer(eeg_Filtered_Referenced, 50, 50)#шинкуем ЭЭГ на мелкие окна
     eeg_as_events = resonance.pipe.transform_to_event(eeg_windows, makeEvent)
-    eeg_windowized = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, eeg_as_events, window_size, window_shift)
+
+    #eeg_as_events_ = resonance.pipe.transform_to_event(eeg_windows, GetFirstTSData(True))
+
+    eeg_windowized = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, eeg_as_events, vars.window_size, vars.window_shift)
     EvtsMaxAmplitudes = resonance.pipe.transform_to_event(eeg_windowized, makeEvent)  # считаем максимумы амплитуд во взятых окнах
-    evt = GetEventsForUntargetedEpochs(thresholdForEEGInVolts, intervalEvtToEvtInSec)#экземпляр получит значение, только в режиме NeedEpoching
+    evt = GetEventsForUntargetedEpochs(vars.thresholdForEEGInVolts, vars.intervalEvtToEvtInSec)#экземпляр получит значение, только в режиме NeedEpoching
     cndtnlEvtForUntargetEpochs = resonance.pipe.filter_event(EvtsMaxAmplitudes, evt)#оставляем эвенты только тех окон, которые проходят по порогу амплитуд и интервалов
     #resonance.createOutput(cndtnlEvtForUntargetEpochs, 'EvtCndtnlForUntargetEpochs')
     #берём окна для нецелевых эпох по отфильтрованным событиям (просмотр максимумов амплитуд (отбрасывание артефактных окон) по всему окну, интервалов между окнами)
-    eeg_windowized_ = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEvtForUntargetEpochs, window_size, window_shift)
-    baselinedEpoch = resonance.pipe.baseline(eeg_windowized_, slice(baseline_begin_offset, baseline_end_offset))
+    eeg_windowized_ = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEvtForUntargetEpochs, vars.window_size, vars.window_shift)
+    baselinedEpoch = resonance.pipe.baseline(eeg_windowized_, slice(vars.baseline_begin_offset, vars.baseline_end_offset))
     #поскольку визуализации объекта окон пока нет, то преобразуем к эвенту чтобы посмотреть выхлоп во вьювере
     exhaustEvt = resonance.pipe.transform_to_event(baselinedEpoch, makeEvtAndAddUntargetEpochToList)
     resonance.createOutput(exhaustEvt, 'UntargetEpochEvt')
@@ -364,19 +409,19 @@ def online_processing():
     # Формируем целевые эпохи на основе порога амплитуды ЭМГ, интервалов между эвентами и безартефактности взятого окна ЭЭГ
     emg_windows = resonance.pipe.windowizer(emg_Notch_HPFiltered, 50, 50)#шинкуем ЭМГ на мелкие окна
     emg_as_events = resonance.pipe.transform_to_event(emg_windows, makeEvent)
-    intervalEvtToEvtInSec = 2.9
-    evt1 = GetEventsForTargetedEpochs(thresholdForEMGInVolts, intervalEvtToEvtInSec)#экземпляр получит значение, только в режиме NeedEpoching
+    #intervalEvtToEvtInSec = 2.8
+    evt1 = GetEventsForTargetedEpochs(vars.thresholdForEMGInVolts, vars.intervalEvtToEvtInSec)#экземпляр получит значение, только в режиме NeedEpoching
     cndtnlEMGEvtForTargetEpochs = resonance.pipe.filter_event(emg_as_events, evt1)#фильтранули событие по амплитуде ЭМГ и интервалам между событиями
     #resonance.createOutput(cndtnlEvtForTargetEpochs, 'EvtCndtnlForTargetEpochs')
-    eeg_wndwzd = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEMGEvtForTargetEpochs, window_size, window_shift)
+    eeg_wndwzd = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEMGEvtForTargetEpochs, vars.window_size, vars.window_shift)
     #baselinedEpoch_ = resonance.pipe.baseline(eeg_wndwzd, slice(baseline_begin_offset, baseline_end_offset))
 
     EvtsMaxAmplitudes = resonance.pipe.transform_to_event(eeg_wndwzd, makeEvent)  # считаем максимумы амплитуд во взятых окнах
-    evt2 = CheckEvtsForAmplitudeThreshold(thresholdForEEGInVolts)#экземпляр получит значение, только в режиме NeedEpoching
+    evt2 = CheckEvtsForAmplitudeThreshold(vars.thresholdForEEGInVolts)#экземпляр получит значение, только в режиме NeedEpoching
     cndtnlEvtForTargetEpochs = resonance.pipe.filter_event(EvtsMaxAmplitudes, evt2)#оставляем эвенты только тех окон, которые проходят по порогу интервалов
     #берём окна для целевых эпох по отфильтрованным событиям (просмотр максимумов амплитуд (отбрасывание артефактных окон) по всему окну)
-    eeg_wndwzd_ = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEvtForTargetEpochs, window_size, window_shift)
-    baselinedEpoch_ = resonance.pipe.baseline(eeg_wndwzd_, slice(baseline_begin_offset, baseline_end_offset))
+    eeg_wndwzd_ = resonance.cross.windowize_by_events(eeg_Filtered_Referenced, cndtnlEvtForTargetEpochs, vars.window_size, vars.window_shift)
+    baselinedEpoch_ = resonance.pipe.baseline(eeg_wndwzd_, slice(vars.baseline_begin_offset, vars.baseline_end_offset))
 
     #поскольку визуализации объекта окон пока нет, то преобразуем к эвенту чтобы посмотреть выхлоп во вьювере
     exhaustEvt = resonance.pipe.transform_to_event(baselinedEpoch_, makeEvtAndAddTargetEpochToList)

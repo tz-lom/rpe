@@ -22,6 +22,14 @@ def read_params(configFileName):
         config = json.load(f)
     return config
 
+def write_params(configFileName, key, param):
+    path_to_config = os.path.join(os.path.dirname(__file__), configFileName)
+    with open(path_to_config) as f:
+        data = json.load(f)
+    data[key] = param
+    with open(path_to_config, 'w') as fp:
+        json.dump(data, fp)
+
 
 class AucMetricHistory(Callback):
     def __init__(self,validation_data,save_best_by_auc=False,path_to_save=None):
