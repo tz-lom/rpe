@@ -1,0 +1,25 @@
+2023-07-25 03:30:40,422  ERROR Недопустимая операция в нескольких потоках: попытка доступа к элементу управления 'Form1' не из того потока, в котором он был создан.
+   в System.Windows.Forms.Control.get_Handle()
+   в System.Windows.Forms.Control.Invalidate(Boolean invalidateChildren)
+   в System.Windows.Forms.Control.Refresh()
+   в SStimProg.Form1.ClassificatorAlarmState(Boolean Status) в D:\Projects\BCI_EyeLines_Online_2020\SStimProg\Form1.cs:строка 149
+   в SStimProg.Form1.Reaction() в D:\Projects\BCI_EyeLines_Online_2020\SStimProg\Form1.cs:строка 158
+   в System.Threading.ThreadHelper.ThreadStart_Context(Object state)
+   в System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   в System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   в System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   в System.Threading.ThreadHelper.ThreadStart()
+2023-07-25 04:02:16,263  ERROR Недопустимая операция в нескольких потоках: попытка доступа к элементу управления 'Form1' не из того потока, в котором он был создан.
+   в System.Windows.Forms.Control.get_Handle()
+   в System.Windows.Forms.Control.set_WindowText(String value)
+   в System.Windows.Forms.Form.set_WindowText(String value)
+   в System.Windows.Forms.Control.set_Text(String value)
+   в System.Windows.Forms.Form.set_Text(String value)
+   в SStimProg.Form1.ClassificatorAlarmState(Boolean Status) в D:\Projects\BCI_EyeLines_Online_2020\SStimProg\Form1.cs:строка 157
+   в SStimProg.Form1.Interval(Int32 cntr) в D:\Projects\BCI_EyeLines_Online_2020\SStimProg\Form1.cs:строка 167
+   в SStimProg.Form1.Reaction() в D:\Projects\BCI_EyeLines_Online_2020\SStimProg\Form1.cs:строка 173
+   в System.Threading.ThreadHelper.ThreadStart_Context(Object state)
+   в System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   в System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   в System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   в System.Threading.ThreadHelper.ThreadStart()

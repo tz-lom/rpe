@@ -1,48 +1,27 @@
 [
 	{
-		"attributes": null,
-		"enabled": true,
-		"group": "default",
-		"index": 201,
-		"label": "Code",
-		"name": "code",
-		"serialized": "from importlib import reload\nimport process\nreload(process)\n\nprocess.online_processing_5()\n",
-		"type": "Resonance::Parameters::MultiLine"
-	},
-	{
-		"enabled": true,
-		"group": "default",
-		"index": 100,
-		"label": "Stream 1",
-		"name": "stream1",
-		"serialized": {
-			"desiredStream": {
-				"connections": [
-					"discover:///?stream=generated&name=signalGenerator"
-				],
-				"metaData": {},
-				"name": "generated",
-				"serializedType": "FwADAAAAAAAAAABAb0A="
-			},
-			"reconnect": false
+		"attributes": {
+			"options": [
+				"python 3.8"
+			],
+			"optionsAreUnique": true
 		},
-		"type": "Resonance::Parameters::Stream"
+		"enabled": true,
+		"group": "default",
+		"index": 1,
+		"label": "Engine",
+		"name": "engine",
+		"serialized": "python 3.8",
+		"type": "Resonance::Parameters::Select"
 	},
 	{
 		"attributes": {
-			"maximum": 99,
-			"minimum": 0,
-			"stepSize": 1
+			"currentStream": {
+				"connections": [],
+				"metaData": {}
+			},
+			"showReconnect": true
 		},
-		"enabled": true,
-		"group": "default",
-		"index": 99,
-		"label": "Number of input streams",
-		"name": "inputsCount",
-		"serialized": 2,
-		"type": "Resonance::Parameters::Integer"
-	},
-	{
 		"enabled": true,
 		"group": "default",
 		"index": 101,
@@ -62,30 +41,6 @@
 		"type": "Resonance::Parameters::Stream"
 	},
 	{
-		"attributes": {
-			"options": [
-				"python 3.8"
-			]
-		},
-		"enabled": false,
-		"group": "default",
-		"index": 1,
-		"label": "Engine",
-		"name": "engine",
-		"serialized": 0,
-		"type": "Resonance::Parameters::Select"
-	},
-	{
-		"attributes": null,
-		"enabled": false,
-		"group": "default",
-		"index": 2,
-		"label": "Load code",
-		"name": "loadCode",
-		"serialized": "import resonance\n",
-		"type": "Resonance::Parameters::MultiLine"
-	},
-	{
 		"attributes": null,
 		"enabled": true,
 		"group": "default",
@@ -93,6 +48,66 @@
 		"label": "Error messages",
 		"name": "errorMessages",
 		"serialized": "",
+		"type": "Resonance::Parameters::MultiLine"
+	},
+	{
+		"attributes": {
+			"currentStream": {
+				"connections": [],
+				"metaData": {}
+			},
+			"showReconnect": true
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 100,
+		"label": "Stream 1",
+		"name": "stream1",
+		"serialized": {
+			"desiredStream": {
+				"connections": [
+					"discover:///?stream=generated&name=signalGenerator"
+				],
+				"metaData": {},
+				"name": "generated",
+				"serializedType": "FwADAAAAAAAAAABAb0A="
+			},
+			"reconnect": false
+		},
+		"type": "Resonance::Parameters::Stream"
+	},
+	{
+		"attributes": null,
+		"enabled": true,
+		"group": "default",
+		"index": 201,
+		"label": "Code",
+		"name": "code",
+		"serialized": "from importlib import reload\nimport MainProcess\nreload(MainProcess)\n\nMainProcess.online_processing()\n",
+		"type": "Resonance::Parameters::MultiLine"
+	},
+	{
+		"attributes": {
+			"maximum": 99,
+			"minimum": 0,
+			"stepSize": 1
+		},
+		"enabled": true,
+		"group": "default",
+		"index": 99,
+		"label": "Number of input streams",
+		"name": "inputsCount",
+		"serialized": 2,
+		"type": "Resonance::Parameters::Integer"
+	},
+	{
+		"attributes": null,
+		"enabled": true,
+		"group": "default",
+		"index": 2,
+		"label": "Load code",
+		"name": "loadCode",
+		"serialized": "import resonance\n",
 		"type": "Resonance::Parameters::MultiLine"
 	}
 ]

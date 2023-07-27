@@ -5,6 +5,7 @@ from utils import  AucMetricHistory, single_auc_loging, read_params
 import numpy as np
 import time
 from keras.utils import to_categorical
+import vars
 
 def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mode = False, plot_fold_history=True):
     #:param x_tr_val:
@@ -79,15 +80,21 @@ def cv_per_subj_test(x_tr_val, y_tr_val, model, model_path, max_epochs, block_mo
             single_auc_loging(val_history.history, 'fold %d' % fold, fold_model_path)
 
     # Test  performance (Naive, until best epoch
-    model.load_weights(modelWeightsFileName)  # Rest model before traning on train+val
-
+    model.load_weights(modelWeightsFileName)  # Rest model before traning on train+validation
+    # Вот этот финт не очень понимаю. Похоже на какую-то хрень. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # Я готовлю данные по fold обучаю по всем fold'ам, потом сбрасываю сеть, обучаю и что толку? Надо разобраться 11.07.2023
+    # model.fit(x_tr_val, y_tr_val,
+    #           epochs=int(np.mean(best_val_loss_epochs)),
+    #           batch_size=32,  # 64
+    #           shuffle=True)
     model.fit(x_tr_val, y_tr_val,
-              epochs=int(np.mean(best_val_loss_epochs)),
+              epochs=int(max_epochs/2),
               batch_size=32,  # 64
               shuffle=True)
 
-    model.save(os.path.join(model_path, 'final_%d.hdf5' %int(np.mean(best_val_loss_epochs))))
+    #model.save(os.path.join(model_path, 'final_%d.hdf5' %int(np.mean(best_val_loss_epochs)))) #вынес сохранение модели в др. ф-цию 10.07.2023
     os.remove(modelWeightsFileName)
+
     return model, np.mean(best_val_aucs)
 
 
@@ -127,6 +134,9 @@ def train_model(epochs, labels):
 
     path_to_models_dir = params['path_to_models_dir']
     path_to_model = os.path.join(os.path.dirname(__file__), path_to_models_dir, str(int(time.time())))
+
+    vars.path_to_current_model = path_to_model #путь к обученной модели в глобальную переменную
+
     max_epochs = params['max_epochs']
     labels = to_categorical(labels,2)
     epochs = epochs[:,np.newaxis,:,:]
